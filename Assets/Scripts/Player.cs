@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class Player : MonoBehaviour
 {
@@ -21,6 +22,7 @@ public class Player : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+
         // 내가 맞지 않았을 때에만 이동과 점프가 작동하도록 함
         if (hitState == false)
         {
@@ -95,7 +97,18 @@ public class Player : MonoBehaviour
         {
             if (hitState == false)
             {
-                StartCoroutine(CoHit(collision));
+                hp = hp - collision.gameObject.GetComponent<MaskDude>().attackDamage;
+
+                // 죽었다.
+                if (hp <= 0)
+                {
+                    StartCoroutine(CoDead());
+                }
+                else
+                {
+                    // 죽진않고 맞았다.
+                    StartCoroutine(CoHit(collision));
+                }
             }
         }
     }
@@ -103,31 +116,52 @@ public class Player : MonoBehaviour
     // 코루틴 > 특정 상태에만 가동
     private IEnumerator CoHit(Collision2D collision)
     {
-        // 적에게 맞았다.
-        // 적에게 공격력만큼 HP가 감소했다
-        hp = hp - collision.gameObject.GetComponent<MaskDude>().attackDamage;
-
         // 플레이어 캐릭터의 애니메이션 변경
-        GetComponent<Animator>().SetBool("isHit", true);
+            GetComponent<Animator>().SetBool("isHit", true);
 
-        // 1. 맞았을때는 컨트롤 불가
-        hitState = true;
+            // 1. 맞았을때는 컨트롤 불가
+            hitState = true;
 
-        // 적 캐릭터의 위치 - 내 캐릭터의 위치
-        Vector3 moveDic = transform.position - collision.transform.position;
+            UIManager.instance.ChangeHP(hp);
 
-        moveDic = Vector3.Normalize(moveDic) * knockbackFoce;
+            // 적 캐릭터의 위치 - 내 캐릭터의 위치
+            Vector3 moveDic = transform.position - collision.transform.position;
 
-        // 2. 맞으면 넉백(내가 충돌한 방향의 반대방향으로 움직이도록)
-        GetComponent<Rigidbody2D>().AddForce(moveDic, ForceMode2D.Impulse);
+            moveDic = Vector3.Normalize(moveDic) * knockbackFoce;
 
-        // 3. 맞으면 HIT 상태일때는 무적
-        hitState = true;
+            // 2. 맞으면 넉백(내가 충돌한 방향의 반대방향으로 움직이도록)
+            GetComponent<Rigidbody2D>().AddForce(moveDic, ForceMode2D.Impulse);
 
-        // 특정 시간 동안 HIT 상태가 유지되고 특정 시간이 끝나면 HIT 상태를 끝낸다.
-        yield return new WaitForSeconds(hitSecond);
+            // 3. 맞으면 HIT 상태일때는 무적
+            hitState = true;
 
-        hitState = false;
-        GetComponent<Animator>().SetBool("isHit", false);
+            // 레이어를 변경해서 적 캐릭터는 충돌이 되지 않고 통과되게 한다.
+            int layer = LayerMask.GetMask("Enemy");
+            LayerMask layerMask = new LayerMask();
+            layerMask.value = layer;
+            GetComponent<BoxCollider2D>().excludeLayers = layerMask;
+
+            // 특정 시간 동안 HIT 상태가 유지되고 특정 시간이 끝나면 HIT 상태를 끝낸다.
+            yield return new WaitForSeconds(hitSecond);
+            layerMask = new LayerMask();
+            GetComponent<BoxCollider2D>().excludeLayers = layerMask;
+
+            hitState = false;
+            GetComponent<Animator>().SetBool("isHit", false);
+    }
+
+    private IEnumerator CoDead()
+    {
+        // 게임 오버 표시
+        UIManager.instance.ShowGameOver();
+
+        // 일정 시간 동안 대기
+        yield return new WaitForSeconds(3);
+
+        // 현재 씬의 이름을 불러오기
+        string sceneName = SceneManager.GetActiveScene().name;
+        
+        // 이번 씬을 재시작
+        SceneManager.LoadScene(sceneName);
     }
 }

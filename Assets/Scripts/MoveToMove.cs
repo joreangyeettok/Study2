@@ -8,6 +8,12 @@ public class MoveToMove : MonoBehaviour
 
     public float moveSecond = 3f;
 
+    public bool moveStop = false;
+
+    public float moveCheckValue = 0.3f;
+
+    private int currentTargetPos = 0;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -22,27 +28,30 @@ public class MoveToMove : MonoBehaviour
 
     private void Move()
     {
+        // 반복문
         // 초기값을 정한다. 반복에서 나가는 조건, 반복한번 할때마다 수정되는 값
-        for (int i = 0; i < moveObjs.Count; i++)
-        {
-            
-        }
 
-        // 도착 했다면
-        if (transform.position == moveObjs[0].position)
+        if (moveStop == false)
         {
+            // 이동 한다.
             float moveTime = moveSecond * Time.deltaTime;
-            Vector3 movePos = Vector3.MoveTowards(transform.position, moveObjs[1].position, moveTime);
+            Vector3 movePos = Vector3.MoveTowards(transform.position, moveObjs[currentTargetPos].position, moveTime);
             transform.position = movePos;
-        }
-        else
-        {
-            float moveTime = moveSecond * Time.deltaTime;
-            Vector3 movePos = Vector3.MoveTowards(transform.position, moveObjs[0].position, moveTime);
-            transform.position = movePos;
-        }
 
-        // 1. 패트롤만들기
-        // 2. 히트 상태일때 적캐릭터 충돌되지 않게 하기
+            // 특정 지점에 도착했다면 다음지점으로 간다.
+            float dis = Vector3.Distance(transform.position, moveObjs[currentTargetPos].position);
+            if (dis <= moveCheckValue)
+            {
+                // 다음 지점으로
+                currentTargetPos = currentTargetPos + 1;
+
+                // 해당하는 위치들의 개수와 현재 타깃 위치가 동일하다면
+                if (moveObjs.Count <= currentTargetPos)
+                {
+                    // 타깃을 0부터 하도록 함
+                    currentTargetPos = 0;
+                }
+            }
+        }
     }
 }
